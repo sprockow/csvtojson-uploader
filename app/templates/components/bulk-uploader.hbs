@@ -1,11 +1,14 @@
 <div class="box__input">
   <input class="box__file" type="file" name="datafile" id="file" />
    <div class="box__controls">
-      <img src="/assets/upload.svg" />
+     <figure>
+       {{inline-svg "/assets/upload.svg" class="foo"}}
+     </figure>
       {{#if noFileSelected}}
         <label for="file">
-            <strong>Choose a file</strong>
+            <strong>Choose a file&#8230;</strong>
         </label>
+        <span>(or drag and drop)</span>
       {{/if}}
       {{#if hasFileSelected}}
         <span>File selected: {{selectedFile.name}}</span>
