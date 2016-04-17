@@ -21,6 +21,19 @@ export default Ember.Component.extend({
     }
   }),
 
+  selectedFile: Ember.computed('file', 'droppedFile', function() {
+    return this.get('file') || this.get('droppedFile');
+  }),
+
+  noFileSelected: Ember.computed.not('selectedFile'),
+
+  hasFileSelected: Ember.computed('selectedFile', 'hasCompleted', 'isUploading', function() {
+    const hasFile = this.get('selectedFile');
+    const hasCompleted = this.get('hasCompleted');
+    const isUploading = this.get('isUploading');
+
+    return hasFile && !isUploading && !hasCompleted;
+  }),
 
   didInsertElement() {
     this.$().on('drag dragstart dragend dragover dragenter dragleave drop', function(e) {
@@ -34,7 +47,24 @@ export default Ember.Component.extend({
         this.set('isDragover', false);
       })
       .on('drop', (e) => {
-        this.set('files', e.originalEvent.dataTransfer.files);
+        var file = e.originalEvent.dataTransfer.files && e.originalEvent.dataTransfer.files[0];
+
+        if (file) {
+          this.set('droppedFile', file);
+        } else {
+          this.set('droppedFile', null);
+        }
+
+      });
+
+      this.$('input[type="file"]').on('change', (e) => {
+        var file = e.target.files && e.target.files[0];
+
+        if (file) {
+          this.set('file', file);
+        } else {
+          this.set('file', null);
+        }
       });
   },
 
@@ -43,7 +73,7 @@ export default Ember.Component.extend({
     e.preventDefault();
     e.stopPropagation();
 
-    return Ember.RSVP.resolve().then(() => {
+    Ember.RSVP.resolve().then(() => {
       const isUploading = this.get('isUploading');
       const ajax = this.get('ajax');
 
@@ -52,38 +82,40 @@ export default Ember.Component.extend({
       }
 
       this.setProperties({
-        isError: false,
-        isSuccess: false
+        error: null,
+        hasCompleted: false,
+        isUploading: true
       });
 
       const ajaxData = new FormData(this.$().get(0));
-      const droppedFiles = this.get('files');
+      const droppedFile = this.get('droppedFile');
 
-      if (droppedFiles) {
-        $.each( droppedFiles, (i, file) => {
-          ajaxData.append( this.$('input[type="file"]').attr('name'), file );
-        });
+      if (droppedFile) {
+        ajaxData.append( this.$('input[type="file"]').attr('name'), droppedFile);
       }
 
-      //TODO call s3 token service
-
-      $.ajax(this.get('action'), {
+      ajax.request(this.get('action'), {
         type: this.get('method'),
         processData: false,
         contentType: false,
         data: ajaxData,
-        success: (data) => {
-          this.set('isSuccess', true);
-        },
-        error: (err) => {
-          Ember.Logger.error(err);
-          this.set('isError', true);
-        }
+      }).then(() => {
+        this.setProperties({
+          isUploading: false,
+          isSuccessful: true,
+          hasCompleted: true
+        });
+      }, (err) => {
+        Ember.Logger.error(err);
+        this.set('error', err);
+        this.setProperties({
+          isUploading: false,
+          isSuccessful: false,
+          hasCompleted: true
+        });
       });
 
     });
-
-    return false;
 
   }
 });
