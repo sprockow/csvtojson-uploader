@@ -2,23 +2,38 @@
 
 module.exports = function(deployTarget) {
   var ENV = {
-    build: {}
-    // include other plugin configuration that applies to all deploy targets here
+    build: {
+      environment: deployTarget
+    }
   };
 
-  if (deployTarget === 'development') {
-    ENV.build.environment = 'development';
-    // configure other plugins for development deploy target here
-  }
+  var TWO_YEAR_CACHE_PERIOD_IN_SEC = 60 * 60 * 24 * 365 * 2;
 
-  if (deployTarget === 'staging') {
-    ENV.build.environment = 'production';
-    // configure other plugins for staging deploy target here
-  }
+  ENV.s3 = {
+    bucket: 'csv-to-api-assets',
+    region: 'us-west-2',
+    cacheControl: {
+      'assets/anon.js': 'max-age=10',
+      'assets/anon.css': 'max-age=10',
+      'assets/*.js': 'max-age='+TWO_YEAR_CACHE_PERIOD_IN_SEC,
+      'assets/*.css': 'max-age='+TWO_YEAR_CACHE_PERIOD_IN_SEC,
+      '**': 'max-age=10'
+    },
+    expires: false
+  };
 
-  if (deployTarget === 'production') {
-    ENV.build.environment = 'production';
-    // configure other plugins for production deploy target here
+  ENV['s3-index'] = {
+    bucket: 'csv-to-api-assets',
+    region: 'us-west-2',
+    allowOverwrite: true
+  };
+
+  ENV['revision-data'] = {
+    type: 'git-commit'
+  };
+
+  ENV['cloudfront'] = {
+    distribution: 'E2XQ6MOZB76LYD'
   }
 
   // Note: if you need to build some configuration asynchronously, you can return
